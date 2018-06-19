@@ -26,7 +26,7 @@ ops.criterionNoiseChannels = 0.2; % fraction of "noise" templates allowed to spa
 % ops.chanMap = 1:ops.Nchan; % treated as linear probe if a chanMap file		
 		
 % other options for controlling the model and optimization		
-ops.Nrank               = 3;    % matrix rank of spike template model (3)		
+ops.Nrank               = ;    % matrix rank of spike template model (3)		
 ops.nfullpasses         = 6;    % number of complete passes through data during optimization (6)		
 ops.maxFR               = 20000;  % maximum number of spikes to extract per batch (20000)		
 ops.fshigh              = 300;   % frequency for high pass filtering		

@@ -3,6 +3,7 @@ function rez = fitTemplates(rez, DATA, uproj)
 nt0             = rez.ops.nt0;
 rez.ops.nt0min  = ceil(20 * nt0/61);
 
+
 ops = rez.ops;
 
 rng('default');
@@ -103,30 +104,34 @@ while (i<=Nbatch * ops.nfullpasses+1)
         lam(:)  = lami(i);
         pm      = pmi(i);
     end
-    
+    disp(i)
     % some of the parameters change with iteration number
     Params = double([NT Nfilt Th maxFR 10 Nchan Nrank pm epu nt0]);
-    
+    disp('here')
     % update the parameters every freqUpdate iterations
     if i>1 &&  ismember(rem(i,Nbatch), iUpdate) %&& i>Nbatch
         dWU = gather_try(dWU);
-        
+        disp(dWU)
+        disp('here')
         % break bimodal clusters and remove low variance clusters
         if  ops.shuffle_clusters &&...
                 i>Nbatch && rem(rem(i,Nbatch), 4*400)==1    % i<Nbatch*ops.nannealpasses
             [dWU, dbins, nswitch, nspikes, iswitch] = ...
                 replace_clusters(dWU, dbins,  Nbatch, ops.mergeT, ops.splitT, WUinit, nspikes);
         end
-        
+        disp(dWU)
+        disp('before')
+        disp(dWU)
         dWU = alignWU(dWU, ops);
-        
+        disp('middle')
         % restrict spikes to their peak group
         %         dWU = decompose_dWU(dWU, kcoords);
         
         % parameter update
         [W, U, mu, UtU, nu] = decompose_dWU(ops, dWU, Nrank, rez.ops.kcoords);
-        
+        disp('other middle')
         if ops.GPU
+            disp('GPU 1')
             dWU = gpuArray(dWU);
         else
             W0 = W;
@@ -134,7 +139,7 @@ while (i<=Nbatch * ops.nfullpasses+1)
             fW = fft(W0, [], 1);
             fW = conj(fW);
         end
-        
+        disp('or here')
         NSP = sum(nspikes,2);
         if ops.showfigures
 %             set(0,'DefaultFigureWindowStyle','docked')
@@ -168,7 +173,7 @@ while (i<=Nbatch * ops.nfullpasses+1)
         rez.errall(ceil(i/freqUpdate))          = nanmean(delta);
         
     end
-    
+    disp('skip')
     % select batch and load from RAM or disk
     ibatch = miniorder(i);
     if ibatch>Nbatch_buff
@@ -178,13 +183,20 @@ while (i<=Nbatch * ops.nfullpasses+1)
     else
         dat = DATA(:,:,ibatch);
     end
-    
+    disp('before')
+    disp(size(dat))
+    if i == 2
+        assignin('base', 'dat4', dat)
+    end
     % move data to GPU and scale it
     if ops.GPU
+        disp('GPU 2')
         dataRAW = gpuArray(dat);
+        disp('after gpu')
     else
         dataRAW = dat;
     end
+    disp('first')
     dataRAW = single(dataRAW);
     dataRAW = dataRAW / ops.scaleproc;
     
@@ -192,6 +204,7 @@ while (i<=Nbatch * ops.nfullpasses+1)
     data = dataRAW * U(:,:);
     
     if ops.GPU
+        disp('GPU 3')
         % run GPU code to get spike times and coefficients
         [dWU, ~, id, x,Cost, nsp] = ...
             mexMPregMU(Params,dataRAW,W,data,UtU,mu, lam .* (20./mu).^2, dWU, nu);
@@ -199,7 +212,7 @@ while (i<=Nbatch * ops.nfullpasses+1)
         [dWU, ~, id, x,Cost, nsp] = ...
             mexMPregMUcpu(Params,dataRAW,fW,data,UtU,mu, lam .* (20./mu).^2, dWU, nu, ops);
     end
-    
+    disp('second')
     dbins = .9975 * dbins;  % this is a hard-coded forgetting factor, needs to become an option
     if ~isempty(id)
         % compute numbers of spikes
@@ -234,10 +247,12 @@ end
 if Nbatch_buff<Nbatch
     fclose(fid);
 end
-
+disp('here')
 if ~ops.GPU
+    disp('GPU 4')
    rez.fW = fW; % save fourier space templates if on CPU
 end
 rez.dWU               = gather_try(dWU);
 rez.nspikes               = nspikes;
+disp('end')
 % %%
